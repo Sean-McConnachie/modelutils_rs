@@ -1,0 +1,8 @@
+[package]
+name = "modelutils_rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sean McConnachie <seanjulian.mcc@gmail.com>"]
+
+[dependencies]
+tobj = "4.0.0"
