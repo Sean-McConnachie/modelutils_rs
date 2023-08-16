@@ -95,13 +95,13 @@ impl Vertex {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
-    pub fn from_model(m: tobj::Mesh) -> Model {
+    pub fn from_model(m: Vec<f32>) -> Model {
         let mut r_vec = vec![];
-        for vtx in 0..m.positions.len() / 3 {
+        for vtx in 0..m.len() / 3 {
             r_vec.push(Self {
-                x: m.positions[3 * vtx],
-                y: m.positions[3 * vtx + 1],
-                z: m.positions[3 * vtx + 2],
+                x: m[3 * vtx],
+                y: m[3 * vtx + 1],
+                z: m[3 * vtx + 2],
             });
         }
         r_vec
@@ -225,6 +225,14 @@ impl ModelDims {
     }
 }
 
+pub fn zero_model(m: &mut Model, dims: &ModelDims) {
+    for vtx in m.iter_mut() {
+        vtx.x += dims.x.min;
+        vtx.y += dims.x.min;
+        vtx.z += dims.z.min;
+    }
+}
+
 pub fn scale_model(m: &mut Model, scale: Vertex) {
     for vtx in m.iter_mut() {
         vtx.x *= scale.x;
@@ -236,10 +244,40 @@ pub fn scale_model(m: &mut Model, scale: Vertex) {
 pub type Blocks = Vec<String>;
 pub type Block = usize;
 
-pub fn model_to_vec(m: Model, arr_size: (usize, usize)) -> Vec<Vec<Block>> {
-    let mut arr: Vec<Vec<Block>> = Vec::with_capacity(arr_size.0);
-    
+pub fn model_to_vec(
+    m: &mut Model,
+    faces: &Vec<u32>,
+    arr_size: (usize, usize, usize),
+) -> Vec<Vec<Vec<Block>>> {
+    let mut arr: Vec<Vec<Vec<Block>>> = Vec::with_capacity(arr_size.0);
+    for _x in 0..arr_size.0 {
+        let mut ys = Vec::with_capacity(arr_size.1);
+        for _y in 0..arr_size.1 {
+            let mut zs = Vec::with_capacity(arr_size.2);
+            for _z in 0..arr_size.2 {
+                const AIR_BLOCK: usize = 0;
+                zs.push(AIR_BLOCK);
+            }
+            ys.push(zs);
+        }
+        arr.push(ys);
+    }
+
     let dims = ModelDims::from_model(&m);
+    
+    zero_model(m, &dims);
+
+    let scale = dims.global_scale(
+        Some(Range::new(0.0, arr_size.0 as f32)),
+        Some(Range::new(0.0, arr_size.1 as f32)),
+        Some(Range::new(0.0, arr_size.2 as f32)),
+    );
+
+    scale_model(m, Vertex::new(scale, scale, scale));
+    
+    for f in faces {
+        
+    }
 
     arr
-    }
+}

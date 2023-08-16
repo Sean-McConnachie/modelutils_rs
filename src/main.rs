@@ -7,40 +7,43 @@ fn main1() {
 
     let mut models = models
         .into_iter()
-        .map(|m| parse::Vertex::from_model(m.mesh))
-        .collect::<Vec<parse::Model>>();
-    let mut model = &mut models[0];
+        .map(|m| (m.mesh.indices, parse::Vertex::from_model(m.mesh.positions)))
+        .collect::<Vec<(Vec<u32>, parse::Model)>>();
 
-    parse::rotate_model(
-        &mut model,
-        parse::Order::XYZ,
-        parse::Rotation::new_deg(0.0, 90.0, 0.0),
-    );
+    //let faces = &models[0].0;
+    //let mut model = &mut models[0].1;
+    for (faces, mut model) in models.into_iter() {
+        parse::rotate_model(
+            &mut model,
+            parse::Order::XYZ,
+            parse::Rotation::new_deg(0.0, 90.0, 0.0),
+        );
 
-    let dims = parse::ModelDims::from_model(&model);
-    let global_scale = dims.global_scale(
-        None,
-        Some(parse::Range::new(0.0, 2.5)),
-        Some(parse::Range::new(0.0, 5.0)),
-    );
-    dbg!(&dims);
-    dbg!(&global_scale);
+        let dims = parse::ModelDims::from_model(&model);
+        let global_scale = dims.global_scale(
+            None,
+            Some(parse::Range::new(0.0, 2.5)),
+            Some(parse::Range::new(0.0, 5.0)),
+        );
+        dbg!(&dims);
+        dbg!(&global_scale);
 
-    parse::scale_model(
-        &mut model,
-        parse::Vertex::new(global_scale, global_scale, global_scale),
-    );
+        parse::scale_model(
+            &mut model,
+            parse::Vertex::new(global_scale, global_scale, global_scale),
+        );
 
-    let dims = parse::ModelDims::from_model(&model);
-    let global_scale = dims.global_scale(
-        None,
-        Some(parse::Range::new(0.0, 2.5)),
-        Some(parse::Range::new(0.0, 5.0)),
-    );
-    dbg!(&dims);
-    dbg!(&global_scale);
+        let dims = parse::ModelDims::from_model(&model);
+        let global_scale = dims.global_scale(
+            None,
+            Some(parse::Range::new(0.0, 2.5)),
+            Some(parse::Range::new(0.0, 5.0)),
+        );
+        dbg!(&dims);
+        dbg!(&global_scale);
 
-    
+        let arr3d = parse::model_to_vec(&mut model, &faces, (10, 10, 10));
+    }
 }
 
 fn main() {
