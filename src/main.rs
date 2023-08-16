@@ -1,48 +1,47 @@
-use modelutils_rs::parse;
 
 const PATH: &str = "puppet.obj";
 
 fn main1() {
-    let (models, _materials) = parse::load_default(&PATH).unwrap();
+    let (models, _materials) = modelutils_rs::load_default(&PATH).unwrap();
 
     let mut models = models
         .into_iter()
-        .map(|m| (m.mesh.indices, parse::Vertex::from_model(m.mesh.positions)))
-        .collect::<Vec<(Vec<u32>, parse::Model)>>();
+        .map(|m| (m.mesh.indices, modelutils_rs::Vertex::from_model(m.mesh.positions)))
+        .collect::<Vec<(Vec<u32>, modelutils_rs::Model)>>();
 
     //let faces = &models[0].0;
     //let mut model = &mut models[0].1;
     for (faces, mut model) in models.into_iter() {
-        parse::rotate_model(
+        modelutils_rs::rotate_model(
             &mut model,
-            parse::Order::XYZ,
-            parse::Rotation::new_deg(0.0, 90.0, 0.0),
+            modelutils_rs::Order::XYZ,
+            modelutils_rs::Rotation::new_deg(0.0, 90.0, 0.0),
         );
 
-        let dims = parse::ModelDims::from_model(&model);
+        let dims = modelutils_rs::ModelDims::from_model(&model);
         let global_scale = dims.global_scale(
             None,
-            Some(parse::Range::new(0.0, 2.5)),
-            Some(parse::Range::new(0.0, 5.0)),
+            Some(modelutils_rs::MinMax::new(0.0, 2.5)),
+            Some(modelutils_rs::MinMax::new(0.0, 5.0)),
         );
         dbg!(&dims);
         dbg!(&global_scale);
 
-        parse::scale_model(
+        modelutils_rs::scale_model(
             &mut model,
-            parse::Vertex::new(global_scale, global_scale, global_scale),
+            modelutils_rs::Vertex::new(global_scale, global_scale, global_scale),
         );
 
-        let dims = parse::ModelDims::from_model(&model);
+        let dims = modelutils_rs::ModelDims::from_model(&model);
         let global_scale = dims.global_scale(
             None,
-            Some(parse::Range::new(0.0, 2.5)),
-            Some(parse::Range::new(0.0, 5.0)),
+            Some(modelutils_rs::MinMax::new(0.0, 2.5)),
+            Some(modelutils_rs::MinMax::new(0.0, 5.0)),
         );
         dbg!(&dims);
         dbg!(&global_scale);
 
-        let arr3d = parse::model_to_vec(&mut model, &faces, (10, 10, 10));
+        let arr3d = modelutils_rs::model_to_vec(&mut model, &faces, (10, 10, 10));
     }
 }
 
