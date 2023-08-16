@@ -31,7 +31,7 @@ impl Order {
 }
 
 
-pub struct RotMtx([[f32; 3]; 3]);
+pub struct RotMtx(pub [[f32; 3]; 3]);
 
 impl RotMtx {
     pub fn new() -> Self {
@@ -69,7 +69,7 @@ impl RotMtx {
 impl Mul<Vec3> for RotMtx {
     type Output = Vec3;
     fn mul(self, rhs: Vec3) -> Self::Output {
-        let m = self;
+        let m = self.0;
         let x = rhs.x;
         let y = rhs.y;
         let z = rhs.z;

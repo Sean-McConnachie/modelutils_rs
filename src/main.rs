@@ -1,49 +1,49 @@
 
 const PATH: &str = "puppet.obj";
 
-fn main1() {
-    let (models, _materials) = modelutils_rs::load_default(&PATH).unwrap();
-
-    let mut models = models
-        .into_iter()
-        .map(|m| (m.mesh.indices, modelutils_rs::Vertex::from_model(m.mesh.positions)))
-        .collect::<Vec<(Vec<u32>, modelutils_rs::Model)>>();
-
-    //let faces = &models[0].0;
-    //let mut model = &mut models[0].1;
-    for (faces, mut model) in models.into_iter() {
-        modelutils_rs::rotate_model(
-            &mut model,
-            modelutils_rs::Order::XYZ,
-            modelutils_rs::Rotation::new_deg(0.0, 90.0, 0.0),
-        );
-
-        let dims = modelutils_rs::ModelDims::from_model(&model);
-        let global_scale = dims.global_scale(
-            None,
-            Some(modelutils_rs::MinMax::new(0.0, 2.5)),
-            Some(modelutils_rs::MinMax::new(0.0, 5.0)),
-        );
-        dbg!(&dims);
-        dbg!(&global_scale);
-
-        modelutils_rs::scale_model(
-            &mut model,
-            modelutils_rs::Vertex::new(global_scale, global_scale, global_scale),
-        );
-
-        let dims = modelutils_rs::ModelDims::from_model(&model);
-        let global_scale = dims.global_scale(
-            None,
-            Some(modelutils_rs::MinMax::new(0.0, 2.5)),
-            Some(modelutils_rs::MinMax::new(0.0, 5.0)),
-        );
-        dbg!(&dims);
-        dbg!(&global_scale);
-
-        let arr3d = modelutils_rs::model_to_vec(&mut model, &faces, (10, 10, 10));
-    }
-}
+// fn main1() {
+//     let (models, _materials) = modelutils_rs::load_default(&PATH).unwrap();
+//
+//     let mut models = models
+//         .into_iter()
+//         .map(|m| (m.mesh.indices, modelutils_rs::Vertex::from_model(m.mesh.positions)))
+//         .collect::<Vec<(Vec<u32>, modelutils_rs::Model)>>();
+//
+//     //let faces = &models[0].0;
+//     //let mut model = &mut models[0].1;
+//     for (faces, mut model) in models.into_iter() {
+//         modelutils_rs::rotate_model(
+//             &mut model,
+//             modelutils_rs::Order::XYZ,
+//             modelutils_rs::Rotation::new_deg(0.0, 90.0, 0.0),
+//         );
+//
+//         let dims = modelutils_rs::ModelDims::from_model(&model);
+//         let global_scale = dims.global_scale(
+//             None,
+//             Some(modelutils_rs::MinMax::new(0.0, 2.5)),
+//             Some(modelutils_rs::MinMax::new(0.0, 5.0)),
+//         );
+//         dbg!(&dims);
+//         dbg!(&global_scale);
+//
+//         modelutils_rs::scale_model(
+//             &mut model,
+//             modelutils_rs::Vertex::new(global_scale, global_scale, global_scale),
+//         );
+//
+//         let dims = modelutils_rs::ModelDims::from_model(&model);
+//         let global_scale = dims.global_scale(
+//             None,
+//             Some(modelutils_rs::MinMax::new(0.0, 2.5)),
+//             Some(modelutils_rs::MinMax::new(0.0, 5.0)),
+//         );
+//         dbg!(&dims);
+//         dbg!(&global_scale);
+//
+//         let arr3d = modelutils_rs::model_to_vec(&mut model, &faces, (10, 10, 10));
+//     }
+// }
 
 fn main() {
     let obj_file = std::env::args()

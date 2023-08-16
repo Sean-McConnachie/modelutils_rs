@@ -1,5 +1,6 @@
 use super::F;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, MulAssign, Sub};
+use crate::coords::RotMtx;
 
 #[derive(Debug, Clone)]
 pub struct Vec3 {
@@ -42,7 +43,8 @@ impl Vec3 {
     }
 
     pub fn normalize(self) -> Self {
-        self / self.length()
+        let l = self.length();
+        self / l
     }
 
     pub fn min_val(&self) -> F {
@@ -75,6 +77,18 @@ impl Mul<f32> for Vec3 {
     type Output = Self;
     fn mul(self, rhs: f32) -> Self::Output {
         Self::new(self.x * rhs, self.y * rhs, self.z * rhs)
+    }
+}
+
+impl MulAssign<&RotMtx> for Vec3 {
+    fn mul_assign(&mut self, rhs: &RotMtx) {
+        let m = rhs.0;
+        let x = self.x;
+        let y = self.y;
+        let z = self.z;
+        self.x = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+        self.y = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+        self.z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
     }
 }
 

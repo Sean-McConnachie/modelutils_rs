@@ -10,7 +10,7 @@ impl Points {
     pub fn from_flat_vec(v: Vec<F>) -> Points {
         let mut r_vec = Points(vec![]);
         for vtx in 0..v.len() / 3 {
-            r_vec.push(Vec3::new(v[3 * vtx], v[3 * vtx + 1], v[3 * vtx + 2]));
+            r_vec.0.push(Vec3::new(v[3 * vtx], v[3 * vtx + 1], v[3 * vtx + 2]));
         }
         r_vec
     }
@@ -33,7 +33,7 @@ impl Model {
         let mut y = x.clone();
         let mut z = x.clone();
 
-        for vtx in self.vertices.0 {
+        for vtx in &self.vertices.0 {
             x.update(vtx.x);
             y.update(vtx.y);
             z.update(vtx.z);
@@ -55,17 +55,17 @@ impl Model {
 
     pub fn rotate(&mut self, rot: Vec3, order: Order) {
         let order = order.order_arr();
-        let x_mtx = RotMtx.x_axis(rot.x);
-        let y_mtx = RotMtx.x_axis(rot.x);
-        let z_mtx = RotMtx.x_axis(rot.x);
+        let x_mtx = RotMtx::x_axis(rot.x);
+        let y_mtx = RotMtx::y_axis(rot.y);
+        let z_mtx = RotMtx::z_axis(rot.z);
 
         for vtx in self.vertices.0.iter_mut() {
             for ax in order {
                 match ax {
-                    Axis::X => vtx.mul(x_mtx),
-                    Axis::Y => vtx.mul(y_mtx),
-                    Axis::Z => vtx.mul(z_mtx),
-                }
+                    Axis::X => *vtx *= &x_mtx,
+                    Axis::Y => *vtx *= &y_mtx,
+                    Axis::Z => *vtx *= &z_mtx,
+                };
             }
         }
     }
