@@ -1,150 +1,30 @@
+use modelutils_rs::{model, model2arr};
+use modelutils_rs::vec3::Vec3;
 
-const PATH: &str = "puppet.obj";
-
-// fn main1() {
-//     let (models, _materials) = modelutils_rs::load_default(&PATH).unwrap();
-//
-//     let mut models = models
-//         .into_iter()
-//         .map(|m| (m.mesh.indices, modelutils_rs::Vertex::from_model(m.mesh.positions)))
-//         .collect::<Vec<(Vec<u32>, modelutils_rs::Model)>>();
-//
-//     //let faces = &models[0].0;
-//     //let mut model = &mut models[0].1;
-//     for (faces, mut model) in models.into_iter() {
-//         modelutils_rs::rotate_model(
-//             &mut model,
-//             modelutils_rs::Order::XYZ,
-//             modelutils_rs::Rotation::new_deg(0.0, 90.0, 0.0),
-//         );
-//
-//         let dims = modelutils_rs::ModelDims::from_model(&model);
-//         let global_scale = dims.global_scale(
-//             None,
-//             Some(modelutils_rs::MinMax::new(0.0, 2.5)),
-//             Some(modelutils_rs::MinMax::new(0.0, 5.0)),
-//         );
-//         dbg!(&dims);
-//         dbg!(&global_scale);
-//
-//         modelutils_rs::scale_model(
-//             &mut model,
-//             modelutils_rs::Vertex::new(global_scale, global_scale, global_scale),
-//         );
-//
-//         let dims = modelutils_rs::ModelDims::from_model(&model);
-//         let global_scale = dims.global_scale(
-//             None,
-//             Some(modelutils_rs::MinMax::new(0.0, 2.5)),
-//             Some(modelutils_rs::MinMax::new(0.0, 5.0)),
-//         );
-//         dbg!(&dims);
-//         dbg!(&global_scale);
-//
-//         let arr3d = modelutils_rs::model_to_vec(&mut model, &faces, (10, 10, 10));
-//     }
-// }
+const PATH: &str = "shapes/cube.obj";
 
 fn main() {
-    let obj_file = std::env::args()
-        .skip(1)
-        .next()
-        .expect("A .obj file to print is required");
+    let (models, _materials) = modelutils_rs::load_default(&PATH).unwrap();
 
-    let (models, materials) =
-        tobj::load_obj(&obj_file, &tobj::LoadOptions::default()).expect("Failed to OBJ load file");
+    let mut models = models
+        .into_iter()
+        .map(|m| model::Model::new(
+            model::Points::from_flat_vec(m.mesh.positions),
+            model::Faces::from_triangles(m.mesh.indices),
+        ))
+        .collect::<Vec<model::Model>>();
 
-    // Note: If you don't mind missing the materials, you can generate a default.
-    //let materials = materials.expect("Failed to load MTL file");
+    for mut model in models.into_iter() {
+        // Align model to origin
+        let bounds = model.model_dims();
+        model.mv(bounds.0 * Vec3::from_scalar(-1.0));
 
-    println!("Number of models          = {}", models.len());
-    //println!("Number of materials       = {}", materials.len());
+        // Scale model to fit in 10x10x10 cube
+        let scale = model.scale_for_box(Vec3::new(9.0, 9.0, 9.0));
+        model.scale(Vec3::from_scalar(scale.min_val()));
 
-    for (i, m) in models.iter().enumerate() {
-        let mesh = &m.mesh;
-        println!("");
-        println!("model[{}].name             = \'{}\'", i, m.name);
-        println!("model[{}].mesh.material_id = {:?}", i, mesh.material_id);
-
-        println!(
-            "model[{}].face_count       = {}",
-            i,
-            mesh.face_arities.len()
-        );
-
-        let mut next_face = 0;
-        for face in 0..mesh.face_arities.len() {
-            let end = next_face + mesh.face_arities[face] as usize;
-
-            let face_indices = &mesh.indices[next_face..end];
-            println!(" face[{}].indices          = {:?}", face, face_indices);
-
-            if !mesh.texcoord_indices.is_empty() {
-                let texcoord_face_indices = &mesh.texcoord_indices[next_face..end];
-                println!(
-                    " face[{}].texcoord_indices = {:?}",
-                    face, texcoord_face_indices
-                );
-            }
-            if !mesh.normal_indices.is_empty() {
-                let normal_face_indices = &mesh.normal_indices[next_face..end];
-                println!(
-                    " face[{}].normal_indices   = {:?}",
-                    face, normal_face_indices
-                );
-            }
-
-            next_face = end;
-        }
-
-        // Normals and texture coordinates are also loaded, but not printed in
-        // this example.
-        println!(
-            "model[{}].positions        = {}",
-            i,
-            mesh.positions.len() / 3
-        );
-        assert!(mesh.positions.len() % 3 == 0);
-
-        for vtx in 0..mesh.positions.len() / 3 {
-            //println!(
-            //"              position[{}] = ({}, {}, {})",
-            //vtx,
-            //mesh.positions[3 * vtx],
-            //mesh.positions[3 * vtx + 1],
-            //mesh.positions[3 * vtx + 2]
-            //);
-        }
+        // Convert to array
+        let arr3d = model2arr::model_2_arr(model, (10, 10, 10));
     }
-
-    //for (i, m) in materials.iter().enumerate() {
-    //let ambient = m.ambient.unwrap();
-    //let diffuse = m.diffuse.unwrap();
-    //let specular = m.specular.unwrap();
-    //println!("material[{}].name = \'{}\'", i, m.name);
-    //println!(
-    //"    material.Ka = ({}, {}, {})",
-    //ambient[0], ambient[1], ambient[2]
-    //);
-    //println!(
-    //"    material.Kd = ({}, {}, {})",
-    //diffuse[0], diffuse[1], diffuse[2]
-    //);
-    //println!(
-    //"    material.Ks = ({}, {}, {})",
-    //specular[0], specular[1], specular[2]
-    //);
-    //println!("    material.Ns = {:?}", m.shininess);
-    //println!("    material.d = {:?}", m.dissolve);
-    //println!("    material.map_Ka = {:?}", m.ambient_texture);
-    //println!("    material.map_Kd = {:?}", m.diffuse_texture);
-    //println!("    material.map_Ks = {:?}", m.specular_texture);
-    //println!("    material.map_Ns = {:?}", m.shininess_texture);
-    //println!("    material.map_Bump = {:?}", m.normal_texture);
-    //println!("    material.map_d = {:?}", m.dissolve_texture);
-
-    //for (k, v) in &m.unknown_param {
-    //println!("    material.{} = {}", k, v);
-    //}
-    //}
 }
+

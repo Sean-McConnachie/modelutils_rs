@@ -1,13 +1,13 @@
-use super::F;
+use super::float;
 
 #[derive(Debug, Clone)]
 pub struct MinMax {
-    pub min: F,
-    pub max: F,
+    pub min: float,
+    pub max: float,
 }
 
 impl MinMax {
-    pub fn new(v1: F, v2: F) -> Self {
+    pub fn new(v1: float, v2: float) -> Self {
         if v1 < v2 {
             Self { min: v1, max: v2 }
         } else {
@@ -15,7 +15,7 @@ impl MinMax {
         }
     }
 
-    pub fn update(&mut self, v: F) {
+    pub fn update(&mut self, v: float) {
         if v > self.max {
             self.max = v;
         } else if v < self.min {
@@ -23,7 +23,7 @@ impl MinMax {
         }
     }
 
-    pub fn range(&self) -> F {
+    pub fn range(&self) -> float {
         self.max - self.min
     }
 }

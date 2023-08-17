@@ -1,12 +1,12 @@
-use super::F;
-use std::ops::{Add, Div, Mul, MulAssign, Sub};
+use super::float;
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
 use crate::coords::RotMtx;
 
 #[derive(Debug, Clone)]
 pub struct Vec3 {
-    pub x: F,
-    pub y: F,
-    pub z: F,
+    pub x: float,
+    pub y: float,
+    pub z: float,
 }
 
 impl Vec3 {
@@ -23,22 +23,22 @@ impl Vec3 {
     };
 
 
-    pub fn new(x: F, y: F, z: F) -> Self {
+    pub fn new(x: float, y: float, z: float) -> Self {
         Self { x, y, z }
     }
 
-    pub fn from_scalar(v: F) -> Self {
+    pub fn from_scalar(v: float) -> Self {
         Self {
             x: v,
             y: v,
             z: v,
         }
     }
-    pub fn length_squared(&self) -> F {
+    pub fn length_squared(&self) -> float {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    pub fn length(&self) -> F {
+    pub fn length(&self) -> float {
         self.length_squared().sqrt()
     }
 
@@ -47,8 +47,16 @@ impl Vec3 {
         self / l
     }
 
-    pub fn min_val(&self) -> F {
+    pub fn min_val(&self) -> float {
         self.x.min(self.y.min(self.z))
+    }
+
+    pub fn cross(v1: Self, v2: Self) -> Self {
+        Self::new(
+            v1.y * v2.z - v1.z * v2.y,
+            v1.z * v2.x - v1.x * v2.z,
+            v1.x * v2.y - v1.y * v2.x,
+        )
     }
 }
 
@@ -92,6 +100,14 @@ impl MulAssign<&RotMtx> for Vec3 {
     }
 }
 
+impl MulAssign<&Vec3> for Vec3 {
+    fn mul_assign(&mut self, rhs: &Vec3) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+        self.z *= rhs.z;
+    }
+}
+
 impl Add<Vec3> for Vec3 {
     type Output = Self;
     fn add(self, rhs: Vec3) -> Self::Output {
@@ -103,6 +119,14 @@ impl Add<f32> for Vec3 {
     type Output = Self;
     fn add(self, rhs: f32) -> Self::Output {
         Self::new(self.x + rhs, self.y + rhs, self.z + rhs)
+    }
+}
+
+impl AddAssign<&Vec3> for Vec3 {
+    fn add_assign(&mut self, rhs: &Vec3) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
     }
 }
 

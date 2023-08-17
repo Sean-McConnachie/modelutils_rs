@@ -1,13 +1,12 @@
-use std::ops::Mul;
 use crate::coords::{Axis, Order, RotMtx};
 use crate::utils;
 use crate::vec3::Vec3;
-use super::F;
+use super::float;
 
-pub struct Points(Vec<Vec3>);
+pub struct Points(pub Vec<Vec3>);
 
 impl Points {
-    pub fn from_flat_vec(v: Vec<F>) -> Points {
+    pub fn from_flat_vec(v: Vec<float>) -> Points {
         let mut r_vec = Points(vec![]);
         for vtx in 0..v.len() / 3 {
             r_vec.0.push(Vec3::new(v[3 * vtx], v[3 * vtx + 1], v[3 * vtx + 2]));
@@ -16,7 +15,35 @@ impl Points {
     }
 }
 
-pub struct Faces(Vec<Vec<usize>>);
+pub struct Faces(pub Vec<Vec<usize>>);
+
+impl Faces {
+    pub fn from_face_arteries(indices: Vec<u32>, arteries: Vec<u32>) -> Self {
+        let mut faces = Vec::with_capacity(arteries.len());
+        let mut i = 0;
+        for artery in arteries {
+            let mut face = Vec::with_capacity(artery as usize);
+            for _ in 0..artery {
+                face.push(indices[i] as usize);
+                i += 1;
+            }
+            faces.push(face);
+        }
+        Self(faces)
+    }
+
+    pub fn from_triangles(indices: Vec<u32>) -> Self {
+        let mut faces = Vec::with_capacity(indices.len() / 3);
+        for f in 0..indices.len() / 3 {
+            faces.push(vec![
+                indices[3 * f] as usize,
+                indices[3 * f + 1] as usize,
+                indices[3 * f + 2] as usize,
+            ]);
+        }
+        Self(faces)
+    }
+}
 
 pub struct Model {
     pub vertices: Points,
@@ -29,9 +56,10 @@ impl Model {
     }
 
     pub fn model_dims(&self) -> (Vec3, Vec3) {
-        let mut x = utils::MinMax::new(0.0, 0.0);
-        let mut y = x.clone();
-        let mut z = x.clone();
+        let p = &self.vertices.0[0]; // Hopefully doesn't crash :)
+        let mut x = utils::MinMax::new(p.x, p.x);
+        let mut y = utils::MinMax::new(p.y, p.y);
+        let mut z = utils::MinMax::new(p.z, p.z);
 
         for vtx in &self.vertices.0 {
             x.update(vtx.x);
@@ -47,9 +75,7 @@ impl Model {
 
     pub fn mv(&mut self, move_vec: Vec3) {
         for vtx in self.vertices.0.iter_mut() {
-            vtx.x += move_vec.x;
-            vtx.y += move_vec.y;
-            vtx.z += move_vec.z;
+            *vtx += &move_vec;
         }
     }
 
@@ -82,9 +108,7 @@ impl Model {
 
     pub fn scale(&mut self, scale: Vec3) {
         for vtx in self.vertices.0.iter_mut() {
-            vtx.x *= scale.x;
-            vtx.y *= scale.y;
-            vtx.z *= scale.z;
+            *vtx *= &scale;
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::ops::Mul;
 use crate::vec3::Vec3;
-use super::F;
+use super::float;
 
 pub enum Axis {
     X,
@@ -38,7 +38,7 @@ impl RotMtx {
         Self([[0.0; 3]; 3])
     }
 
-    pub fn x_axis(theta: F) -> Self {
+    pub fn x_axis(theta: float) -> Self {
         let t = theta;
         Self([
             [1.0, 0.0, 0.0],
@@ -47,7 +47,7 @@ impl RotMtx {
         ])
     }
 
-    pub fn y_axis(theta: F) -> Self {
+    pub fn y_axis(theta: float) -> Self {
         let t = theta;
         Self([
             [t.cos(), 0.0, t.sin()],
@@ -56,7 +56,7 @@ impl RotMtx {
         ])
     }
 
-    pub fn z_axis(theta: F) -> Self {
+    pub fn z_axis(theta: float) -> Self {
         let t = theta;
         Self([
             [t.cos(), -t.sin(), 0.0],
