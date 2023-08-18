@@ -1,9 +1,53 @@
 #![allow(non_snake_case)]
 
+use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::ops::Range;
 use crate::model::Model;
 use super::float;
 use crate::vec3::Vec3;
+
+#[derive(Serialize, Deserialize)]
+struct ZAxis {
+    b: Vec<bool>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct YAxis {
+    b: Vec<ZAxis>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct JsonModel {
+    b: Vec<YAxis>,
+}
+
+impl Into<JsonModel> for Vec<Vec<Vec<bool>>> {
+    fn into(self) -> JsonModel {
+        let mut y_arr = Vec::with_capacity(self.len());
+        for y in self {
+            let mut z_arr = Vec::with_capacity(y.len());
+            for z in y {
+                z_arr.push(ZAxis { b: z });
+            }
+            y_arr.push(YAxis { b: z_arr });
+        }
+        JsonModel { b: y_arr }
+    }
+}
+
+pub fn arr_2_json<P>(path: P, arr: Vec<Vec<Vec<bool>>>) -> std::io::Result<()>
+    where
+        P: AsRef<std::path::Path> + std::fmt::Debug,
+{
+    let mut file = std::fs::File::create(path)?;
+
+    let json: JsonModel = arr.into();
+    let json = serde_json::to_string(&json)?;
+    file.write_all(json.as_bytes())?;
+
+    Ok(())
+}
 
 pub struct Blocks(pub Vec<String>);
 
@@ -30,7 +74,7 @@ impl<'a> TriangularPlane<'a> {
         let v1 = A.clone() - B.clone();
         let v2 = A.clone() - C.clone();
         let n = Vec3::cross(v1, v2);
-        let k = (n.x * A.x + n.y * A.y + n.z * A.z);
+        let k = n.x * A.x + n.y * A.y + n.z * A.z;
         Self::new(A, B, C, n, k)
     }
 
@@ -78,15 +122,22 @@ impl<'a> TriangularPlane<'a> {
     }
 }
 
-fn bounds_to_range(bounds: (Vec3, Vec3)) -> (Range<usize>, Range<usize>, Range<usize>) {
+fn make_range(min: float, max: float, resolution: float) -> Range<usize> {
+    let min = (min * resolution).round() as usize;
+    let max = (max * resolution).round() as usize;
+    min..max
+}
+
+fn bounds_to_range(bounds: (Vec3, Vec3), resolution: float) -> (Range<usize>, Range<usize>, Range<usize>) {
     (
-        bounds.0.x as usize..bounds.1.x as usize + 1,
-        bounds.0.y as usize..bounds.1.y as usize + 1,
-        bounds.0.z as usize..bounds.1.z as usize + 1,
+        make_range(bounds.0.x, bounds.1.x, resolution),
+        make_range(bounds.0.y, bounds.1.y, resolution),
+        make_range(bounds.0.z, bounds.1.z, resolution),
     )
 }
 
-pub fn model_2_arr(mut model: Model, dims: (usize, usize, usize)) -> Vec<Vec<Vec<bool>>> {
+/// Resolution up samples the model. Increase this if there are many "holes" in the resulting array.
+pub fn model_2_arr(model: Model, dims: (usize, usize, usize), resolution: float) -> Vec<Vec<Vec<bool>>> {
     let vertices = model.vertices.0;
     let mut blocks = Vec::with_capacity(dims.0);
 
@@ -116,14 +167,17 @@ pub fn model_2_arr(mut model: Model, dims: (usize, usize, usize)) -> Vec<Vec<Vec
             &vertices[face[2]],
         );
         let bounds = plane.bounds();
-        let (x_range, y_range, _z_range) = bounds_to_range(bounds);
+        let (x_range, y_range, z_range) = bounds_to_range(bounds, resolution);
         let fills_z = plane.fills_z();
         for x in x_range.clone() {
             for y in y_range.clone() {
-                let p = Vec3::new(x as float, y as float, 0.0);
+                let p = Vec3::new(x as float / resolution, y as float / resolution, 0.0);
                 if plane.is_within(p.clone()) {
+                    let x = x / resolution as usize;
+                    let y = y / resolution as usize;
                     if fills_z {
-                        for z in 0..dims.2 {
+                        for z in z_range.clone() {
+                            let z = (z as float / resolution).round() as usize;
                             blocks[x][y][z] = true;
                         }
                     } else if !fills_z {
