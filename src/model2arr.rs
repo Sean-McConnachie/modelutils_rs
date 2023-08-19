@@ -9,34 +9,36 @@ use crate::vec3::Vec3;
 
 #[derive(Serialize, Deserialize)]
 struct ZAxis {
-    b: Vec<bool>,
+    b: Vec<u16>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct YAxis {
+struct XAxis {
     b: Vec<ZAxis>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct JsonModel {
-    b: Vec<YAxis>,
+    b: Vec<XAxis>,
 }
 
-impl Into<JsonModel> for Vec<Vec<Vec<bool>>> {
+impl Into<JsonModel> for ArrayModel {
     fn into(self) -> JsonModel {
-        let mut y_arr = Vec::with_capacity(self.len());
-        for y in self {
-            let mut z_arr = Vec::with_capacity(y.len());
-            for z in y {
-                z_arr.push(ZAxis { b: z });
+        let mut y_arr = Vec::with_capacity(self.blocks.len());
+
+        for y in self.blocks.into_iter() {
+            let mut x_arr = Vec::with_capacity(y.len());
+            for x in y.into_iter() {
+                x_arr.push(ZAxis { b: x });
             }
-            y_arr.push(YAxis { b: z_arr });
+            y_arr.push(XAxis { b: x_arr });
         }
+
         JsonModel { b: y_arr }
     }
 }
 
-pub fn arr_2_json<P>(path: P, arr: Vec<Vec<Vec<bool>>>) -> std::io::Result<()>
+pub fn arr_2_json<P>(path: P, arr: ArrayModel) -> std::io::Result<()>
     where
         P: AsRef<std::path::Path> + std::fmt::Debug,
 {
@@ -51,7 +53,7 @@ pub fn arr_2_json<P>(path: P, arr: Vec<Vec<Vec<bool>>>) -> std::io::Result<()>
 
 pub struct Blocks(pub Vec<String>);
 
-pub type Block = usize;
+pub type Block = u16;
 
 type Vec3Ref<'a> = &'a Vec3;
 
@@ -136,23 +138,48 @@ fn bounds_to_range(bounds: (Vec3, Vec3), resolution: float) -> (Range<usize>, Ra
     )
 }
 
-/// Resolution up samples the model. Increase this if there are many "holes" in the resulting array.
-pub fn model_2_arr(model: Model, dims: (usize, usize, usize), resolution: float) -> Vec<Vec<Vec<bool>>> {
-    let vertices = model.vertices.0;
-    let mut blocks = Vec::with_capacity(dims.0);
+pub type CoordXZ = (usize, usize);
+pub type CoordXYZ = (usize, usize, usize);
 
-    // Populate blocks
-    for _x in 0..dims.0 {
-        let mut y_arr = Vec::with_capacity(dims.1);
+/// Blocks are stored as blocks[y][x][z]
+#[derive(Debug)]
+pub struct ArrayModel {
+    pub blocks: Vec<Vec<Vec<Block>>>,
+    pub dims: (usize, usize, usize),
+    pub resolution: float,
+}
+
+impl ArrayModel {
+    pub fn new(dims: CoordXYZ, resolution: float) -> Self {
+        let mut blocks = Vec::with_capacity(dims.1);
         for _y in 0..dims.1 {
-            let mut z_arr = Vec::with_capacity(dims.2);
-            for _z in 0..dims.2 {
-                z_arr.push(false);
+            let mut x_arr = Vec::with_capacity(dims.0);
+            for _x in 0..dims.0 {
+                let mut z_arr = Vec::with_capacity(dims.2);
+                for _z in 0..dims.2 {
+                    z_arr.push(0);
+                }
+                x_arr.push(z_arr);
             }
-            y_arr.push(z_arr);
+            blocks.push(x_arr);
         }
-        blocks.push(y_arr);
+        Self { blocks, dims, resolution }
     }
+
+    pub fn get(&self, b: CoordXYZ) -> u16 {
+        self.blocks[b.1][b.0][b.2]
+    }
+
+    pub fn set(&mut self, b: CoordXYZ, val: u16) {
+        self.blocks[b.1][b.0][b.2] = val;
+    }
+}
+
+/// Resolution up samples the model. Increase this if there are many "holes" in the resulting array.
+pub fn model_2_arr(model: Model, dims: CoordXYZ, resolution: float) -> ArrayModel {
+    let vertices = model.vertices.0;
+
+    let mut array_model = ArrayModel::new(dims, resolution);
 
     for face in &model.faces.0 {
         if face.len() < 3 {
@@ -178,17 +205,16 @@ pub fn model_2_arr(model: Model, dims: (usize, usize, usize), resolution: float)
                     if fills_z {
                         for z in z_range.clone() {
                             let z = (z as float / resolution).round() as usize;
-                            blocks[x][y][z] = true;
+                            array_model.set((x, y, z), 1);
                         }
                     } else if !fills_z {
                         let z = plane.calculate_z(p);
                         let z = z.round() as usize;
-                        blocks[x][y][z] = true;
+                        array_model.set((x, y, z), 1);
                     }
                 }
             }
         }
-    };
-
-    blocks
+    }
+    array_model
 }

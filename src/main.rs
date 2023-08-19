@@ -13,7 +13,7 @@ fn main() {
     let scale_vec = Vec3::new(SCALE_DIMS.0, SCALE_DIMS.1, SCALE_DIMS.2);
     let (models, _materials) = modelutils_rs::load_default(&PATH).unwrap();
 
-    let mut models = models
+    let models = models
         .into_iter()
         .map(|m| model::Model::new(
             model::Points::from_flat_vec(m.mesh.positions),
