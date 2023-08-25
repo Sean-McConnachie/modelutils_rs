@@ -1,5 +1,7 @@
+use std::path;
 use crate::coords::{Axis, Order, RotMtx};
 use crate::utils;
+use crate::vec2::Vec2;
 use crate::vec3::Vec3;
 use super::float;
 
@@ -15,27 +17,13 @@ impl Points {
     }
 }
 
-pub struct Faces(pub Vec<Vec<usize>>);
+pub struct Faces(pub Vec<[usize; 3]>);
 
 impl Faces {
-    pub fn from_face_arteries(indices: Vec<u32>, arteries: Vec<u32>) -> Self {
-        let mut faces = Vec::with_capacity(arteries.len());
-        let mut i = 0;
-        for artery in arteries {
-            let mut face = Vec::with_capacity(artery as usize);
-            for _ in 0..artery {
-                face.push(indices[i] as usize);
-                i += 1;
-            }
-            faces.push(face);
-        }
-        Self(faces)
-    }
-
     pub fn from_triangles(indices: Vec<u32>) -> Self {
         let mut faces = Vec::with_capacity(indices.len() / 3);
         for f in 0..indices.len() / 3 {
-            faces.push(vec![
+            faces.push([
                 indices[3 * f] as usize,
                 indices[3 * f + 1] as usize,
                 indices[3 * f + 2] as usize,
@@ -45,14 +33,60 @@ impl Faces {
     }
 }
 
+pub struct TextureCoords(pub Vec<Vec2>);
+
+impl TextureCoords {
+    pub fn from_flat_vec(v: Vec<float>) -> Option<Self> {
+        if v.len() % 2 != 0 || v.is_empty() {
+            return None;
+        }
+
+        let mut r_vec = TextureCoords(vec![]);
+        for vtx in 0..v.len() / 2 {
+            r_vec.0.push(Vec2::new(v[2 * vtx], v[2 * vtx + 1]));
+        }
+        Some(r_vec)
+    }
+}
+
+pub struct TextureFaces(pub Vec<[usize; 3]>);
+
+impl TextureFaces {
+    pub fn from_triangles(indices: Vec<u32>) -> Option<Self> {
+        if indices.len() % 3 != 0 || indices.is_empty() {
+            return None;
+        }
+        let mut faces = Vec::with_capacity(indices.len() / 3);
+        for f in 0..indices.len() / 3 {
+            faces.push([
+                indices[3 * f] as usize,
+                indices[3 * f + 1] as usize,
+                indices[3 * f + 2] as usize,
+            ]);
+        }
+        Some(Self(faces))
+    }
+}
+
 pub struct Model {
     pub vertices: Points,
     pub faces: Faces,
+    pub texture_img: Option<image::DynamicImage>,
+    pub texture_coords: Option<TextureCoords>,
+    pub texture_faces: Option<TextureFaces>,
 }
 
 impl Model {
-    pub fn new(vertices: Points, faces: Faces) -> Self {
-        Self { vertices, faces }
+    pub fn new(
+        vertices: Points, faces: Faces, texture_fp: Option<path::PathBuf>,
+        texture_coords: Option<TextureCoords>, texture_faces: Option<TextureFaces>,
+    ) -> Self {
+        let img = if let Some(fp) = texture_fp {
+            Some(image::open(fp).unwrap())
+        } else {
+            None
+        };
+        Self { vertices, faces, texture_img: img, texture_coords, texture_faces }
     }
 
     pub fn model_dims(&self) -> (Vec3, Vec3) {

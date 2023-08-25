@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+use crate::model2arr::Block;
+
 /// ```
 /// use modelutils_rs::{model, model2arr};
 /// use modelutils_rs::vec3::Vec3;
@@ -47,6 +50,7 @@ pub mod coords;
 pub mod utils;
 pub mod model;
 pub mod model2arr;
+pub mod vec2;
 
 #[allow(non_camel_case_types)]
 pub type float = f32;
@@ -67,3 +71,24 @@ pub fn load_default<P>(p: P) -> tobj::LoadResult
     tobj::load_obj(&p, &opts)
 }
 
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TextureNames {
+    textures: Vec<String>,
+}
+
+pub fn load_textures<P>(dir: P) -> (TextureNames, Vec<(Block, image::DynamicImage)>)
+where
+        P: AsRef<std::path::Path> + std::fmt::Debug, {
+    let mut textures = Vec::new();
+    let mut texture_names = Vec::new();
+    for (i, entry) in std::fs::read_dir(dir).unwrap().enumerate() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let img = image::open(path).unwrap();
+        textures.push((i as Block, img));
+        let fname = entry.file_name().into_string().unwrap();
+        texture_names.push(fname);
+    }
+    (TextureNames { textures: texture_names }, textures)
+}
