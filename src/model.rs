@@ -1,4 +1,3 @@
-use std::path;
 use crate::coords::{Axis, Order, RotMtx};
 use crate::utils;
 use crate::vec2::Vec2;
@@ -71,22 +70,13 @@ impl TextureFaces {
 pub struct Model {
     pub vertices: Points,
     pub faces: Faces,
-    pub texture_img: Option<image::DynamicImage>,
-    pub texture_coords: Option<TextureCoords>,
-    pub texture_faces: Option<TextureFaces>,
 }
 
 impl Model {
     pub fn new(
-        vertices: Points, faces: Faces, texture_fp: Option<path::PathBuf>,
-        texture_coords: Option<TextureCoords>, texture_faces: Option<TextureFaces>,
+        vertices: Points, faces: Faces,
     ) -> Self {
-        let img = if let Some(fp) = texture_fp {
-            Some(image::open(fp).unwrap())
-        } else {
-            None
-        };
-        Self { vertices, faces, texture_img: img, texture_coords, texture_faces }
+        Self { vertices, faces }
     }
 
     pub fn model_dims(&self) -> (Vec3, Vec3) {
