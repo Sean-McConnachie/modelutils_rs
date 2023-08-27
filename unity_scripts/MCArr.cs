@@ -2,54 +2,86 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-[Serializable]
-class ZAxis
+[System.Serializable]
+public struct Layer
 {
-    public bool[] b;
+    public int y;
+    public Coord[] blocks;
+}
+
+[System.Serializable]
+public struct Coord
+{
+    public int[] b;
+}
+
+[System.Serializable]
+public struct BlockData
+{
+    public uint x;
+    public uint z;
+}
+
+[System.Serializable]
+public struct Grouping
+{
+    public Layer[] layers;
+}
+
+[System.Serializable]
+public struct CoordsExport
+{
+    public Grouping[] groupings;
 }
 
 [Serializable]
-class YAxis
+class TextureFNames
 {
-    public ZAxis[] b;
-}
-
-[Serializable]
-class Model
-{
-    public YAxis[] b;
-
-    [NonSerialized] public (int, int, int) dims;
-
-    public bool this[int x, int y, int z]
-    {
-        get { return b[x].b[y].b[z]; }
-    }
+    public string[] textures;
 }
 
 public class MCArr : MonoBehaviour
 {
     [Header("Input")] public GameObject parent;
-    public string fileName;
+    public string textureFolder;
+    public string textureJsonPath;
+    public string modelJsonPath;
 
     [Header("Output")] [Range(0f, 2f)] public float cubeScale = 1f;
     [Range(0f, 5f)] public float cubeSpacing = 1f;
 
-    private Model model;
+    private CoordsExport model;
     private long prevFileLength;
     private bool newInput;
+    private List<Texture2D> textures;
 
     void Start()
     {
+        // load textures from /textures folder
+        TextureFNames texture_fnames = JsonUtility.FromJson<TextureFNames>(File.ReadAllText(textureJsonPath));
+
+
+        textures = new List<Texture2D>();
+        foreach (var file in texture_fnames.textures)
+        {
+            if (file.EndsWith(".meta"))
+                continue;
+            var texture = new Texture2D(2, 2);
+            texture.LoadImage(File.ReadAllBytes($"{textureFolder}/{file}"));
+            textures.Add(texture);
+        }
+
+        // ensure json gets loaded
         prevFileLength = -1;
     }
 
     private bool ShouldUpdate()
     {
-        var fileInfo = new System.IO.FileInfo(fileName);
+        var fileInfo = new System.IO.FileInfo(modelJsonPath);
         bool differentFile = fileInfo.Length != prevFileLength || newInput;
         newInput = false;
         prevFileLength = fileInfo.Length;
@@ -67,12 +99,13 @@ public class MCArr : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
-        print($"Before: {before} After: {parent.transform.childCount}");
+
+        // print($"Before: {before} After: {parent.transform.childCount}");
 
         // Read file
         {
             string json = "";
-            StreamReader inp_stm = new StreamReader(fileName);
+            StreamReader inp_stm = new StreamReader(modelJsonPath);
             while (!inp_stm.EndOfStream)
             {
                 json += inp_stm.ReadLine();
@@ -80,31 +113,33 @@ public class MCArr : MonoBehaviour
 
             inp_stm.Close();
 
-
-            model = JsonUtility.FromJson<Model>(json);
-            model.dims = (
-                model.b.Length,
-                model.b[0].b.Length,
-                model.b[0].b[0].b.Length
-            );
+            model = JsonUtility.FromJson<CoordsExport>(json);
         }
 
         // Create cubes
         {
-            for (int x = 0; x < model.dims.Item1; x++)
+            for (int group = 0; group < model.groupings.Length; group++)
             {
-                for (int y = 0; y < model.dims.Item2; y++)
+                var grouping = model.groupings[group].layers;
+                for (int layer = 0; layer < grouping.Length; layer++)
                 {
-                    for (int z = 0; z < model.dims.Item3; z++)
+                    var layerData = grouping[layer].blocks;
+
+                    for (int i = 0; i < layerData.Length; i++)
                     {
-                        if (model[x, y, z])
-                        {
-                            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                            cube.transform.parent = parent.transform;
-                            cube.transform.localPosition =
-                                new Vector3(x * cubeSpacing, y * cubeSpacing, z * cubeSpacing);
-                            cube.transform.localScale = new Vector3(cubeScale, cubeScale, cubeScale);
-                        }
+                        var coord = layerData[i];
+
+
+                        var x = coord.b[0];
+                        var z = coord.b[1];
+
+                        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        cube.transform.parent = parent.transform;
+                        cube.transform.localPosition =
+                            new Vector3(x * cubeSpacing, layer * cubeSpacing, z * cubeSpacing);
+                        cube.transform.localScale = new Vector3(cubeScale, cubeScale, cubeScale);
+
+                        cube.GetComponent<Renderer>().material.mainTexture = textures[group];
                     }
                 }
             }
